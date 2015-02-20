@@ -96,6 +96,13 @@ implementation
 
 uses Unit2;
 
+function IsWOW64: BOOL;
+begin
+  Result := False;
+  if GetProcAddress(GetModuleHandle(kernel32), 'IsWow64Process') <> nil then
+    IsWow64Process(GetCurrentProcess, Result);
+end;
+
 function Rc4(i_Encrypt: integer; s_EncryptText, s_EncryptPassword: string;
   i_EncryptLevel: integer = 1): string;
 var
@@ -108,11 +115,11 @@ var
 begin
   if (i_Encrypt <> 0) and (i_Encrypt <> 1) then
   begin
-    result := '';
+    Result := '';
   end
   else if (s_EncryptText = '') or (s_EncryptPassword = '') then
   begin
-    result := '';
+    Result := '';
   end
   else
   begin
@@ -249,7 +256,7 @@ begin
         s_EncryptText := v_EncryptModified;
       end;
     end;
-    result := s_EncryptText;
+    Result := s_EncryptText;
   end;
 end;
 
@@ -267,7 +274,7 @@ begin
     @vVolumeSerialNumber, vMaximumComponentLength, vFileSystemFlags,
     vFileSystemNameBuffer, SizeOf(vFileSystemNameBuffer)) then
   begin
-    result := IntToHex(vVolumeSerialNumber, 8);
+    Result := IntToHex(vVolumeSerialNumber, 8);
   end;
 end;
 
@@ -281,7 +288,7 @@ var
   InFolder: array [0 .. MAX_PATH] of Char;
   LinkFileName: WideString;
 begin
-  result := False;
+  Result := False;
   if not FileExists(Exe) then
     Exit;
   if Lnk = '' then
@@ -310,7 +317,7 @@ begin
 
   IPFile := IObj as IPersistFile;
   if IPFile.Save(PWideChar(LinkFileName), False) = 0 then
-    result := True;
+    Result := True;
 end; { CreateShortcut 函数结束 }
 
 function GetShellFolders(strDir: string): string;
@@ -330,14 +337,14 @@ begin
   finally
     Reg.Free;
   end;
-  result := strFolders;
+  Result := strFolders;
 end;
 
 { 获取桌面 }
 
 function GetDeskeptPath: string;
 begin
-  result := GetShellFolders('Desktop'); // 是取得桌面文件夹的路径
+  Result := GetShellFolders('Desktop'); // 是取得桌面文件夹的路径
 end;
 
 function BytesToStr(iBytes: integer): String;
@@ -346,9 +353,9 @@ var
 begin
   iKb := Round(iBytes / 1024);
   if iKb > 1000 then
-    result := Format('%.2f MB', [iKb / 1024])
+    Result := Format('%.2f MB', [iKb / 1024])
   else
-    result := Format('%d KB', [iKb]);
+    Result := Format('%d KB', [iKb]);
 end;
 
 function KillTask(ExeFileName: string): integer;
@@ -359,7 +366,7 @@ var
   FSnapshotHandle: THandle;
   FProcessEntry32: TProcessEntry32;
 begin
-  result := 0;
+  Result := 0;
   FSnapshotHandle := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   FProcessEntry32.dwSize := SizeOf(FProcessEntry32);
   ContinueLoop := Process32First(FSnapshotHandle, FProcessEntry32);
@@ -368,7 +375,7 @@ begin
     if ((UpperCase(ExtractFileName(FProcessEntry32.szExeFile))
       = UpperCase(ExeFileName)) or (UpperCase(FProcessEntry32.szExeFile)
       = UpperCase(ExeFileName))) then
-      result := integer(TerminateProcess(OpenProcess(PROCESS_TERMINATE, BOOL(0),
+      Result := integer(TerminateProcess(OpenProcess(PROCESS_TERMINATE, BOOL(0),
         FProcessEntry32.th32ProcessID), 0));
     ContinueLoop := Process32Next(FSnapshotHandle, FProcessEntry32);
   end;
@@ -381,23 +388,23 @@ var
   i, Len, C: integer;
 begin
   C := 0;
-  result := 0;
+  Result := 0;
   Buf := Source;
   i := Pos(Sub, Source);
   Len := Length(Sub);
   while i <> 0 do
   begin
     inc(C);
-    inc(result, i);
+    inc(Result, i);
     Delete(Buf, 1, i + Len - 1);
     i := Pos(Sub, Buf);
     if C >= Index then
       Break;
     if i > 0 then
-      inc(result, Len - 1);
+      inc(Result, Len - 1);
   end;
   if C < Index then
-    result := 0;
+    Result := 0;
 end;
 
 // -------------------截取字符串函数    开始
@@ -406,7 +413,7 @@ var
   i: integer;
   str: string;
 begin
-  result := TStringList.Create;
+  Result := TStringList.Create;
   repeat
     i := Pos(dec, src);
     str := copy(src, 1, i - 1);
@@ -417,12 +424,12 @@ begin
     end;
     if i > 0 then
     begin
-      result.Add(str);
+      Result.Add(str);
       Delete(src, 1, i + Length(dec) - 1);
     end;
   until i <= 0;
   if src <> '' then
-    result.Add(src);
+    Result.Add(src);
 end;
 // -------------------截取字符串函数结束
 // --------------------------------------------------------------------
@@ -432,14 +439,14 @@ function IsFileInUse(fName: string): Boolean;
 var
   HFileRes: HFILE;
 begin
-  result := False; // 返回值为假(即文件不被使用)
+  Result := False; // 返回值为假(即文件不被使用)
   if not FileExists(fName) then
     Exit; // 如果文件不存在则退出
   HFileRes := CreateFile(PChar(fName), GENERIC_READ or GENERIC_WRITE,
     0 { this is the trick! } , nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-  result := (HFileRes = INVALID_HANDLE_VALUE);
+  Result := (HFileRes = INVALID_HANDLE_VALUE);
   // 如果CreateFile返回失败那么Result为真(即文件正在被使用)
-  if not result then // 如果CreateFile函数返回是成功
+  if not Result then // 如果CreateFile函数返回是成功
     CloseHandle(HFileRes); // 那么关闭句柄
 end;
 // --------------------------------------------------------------------
@@ -450,7 +457,8 @@ var
   h: TIdHTTP;
   res: String;
   MyStream: TMemoryStream;
-  DownLoadFile: TFileStream;
+  DownLoadFileX64: TFileStream;
+  DownLoadFileX86: TFileStream;
 
 begin
 
@@ -458,17 +466,44 @@ begin
   Label1.visible := True;
   ProgressBar1.visible := True;
   strDesk := GetDeskeptPath;
-  DownLoadFile := TFileStream.Create(strDesk + '\巴豆.exe', fmCreate);
-  try
-    Label1.Caption := '正在为你下载';
-    IdHTTP2.Get
-      ('https://raw.githubusercontent.com/topagent/paclist/master/KylinAgent.exe',
-      DownLoadFile);
-  except
-    showmessage('请检查你的网络,然后重试');
-    DownLoadFile.Free;
-  end;
 
+  if IsWOW64 then
+  begin
+    KillTask('巴豆X64.exe');
+    sleep(2000);
+    DownLoadFileX64 := TFileStream.Create(strDesk + '\巴豆X64.exe', fmCreate);
+    StatusBar1.Panels[2].text := 'X64系统';
+    try
+      Label1.Caption := '正在为你下载';
+      IdHTTP2.Get
+        ('https://raw.githubusercontent.com/chinatwilight/badoufrmmain/master/BadouX64.exe',
+        DownLoadFileX64);
+    except
+      showmessage('请检查你的网络,然后重试');
+
+    end;
+    DownLoadFileX64.Free;
+
+  end
+
+  else
+  begin
+    KillTask('巴豆X86.exe');
+    sleep(2000);
+    StatusBar1.Panels[2].text := 'X86系统';
+    DownLoadFileX86 := TFileStream.Create(strDesk + '\巴豆X86.exe', fmCreate);
+    try
+      Label1.Caption := '正在为你下载';
+      IdHTTP2.Get
+        ('https://raw.githubusercontent.com/chinatwilight/badoufrmmain/master/BadouX86.exe',
+        DownLoadFileX86);
+    except
+      showmessage('请检查你的网络,然后重试');
+
+    end;
+    DownLoadFileX86.Free;
+
+  end;
 
 end;
 
@@ -502,6 +537,7 @@ var
   // =========================================== Declare the download function Variable Code end
 begin
   // Edit3.text := GetVolumeID;
+
   ProgressBar1.visible := False;
   Label1.visible := False;
   // StrKey := Edit3.text;
@@ -531,7 +567,7 @@ begin
   MyStream := TMemoryStream.Create;
   try
     IdHTTP1.Get
-      ('https://raw.githubusercontent.com/topagent/paclist/master/ServerVerson.ini',
+      ('https://raw.githubusercontent.com/chinatwilight/badoufrmmain/master/ServerVerson.ini',
       MyStream);
   except
     Label1.Caption := '从服务器获取版本信息失败,请检查你的网络!';
@@ -541,6 +577,7 @@ begin
   end;
   MyStream.SaveToFile(path + '\ServerVerson.ini');
   MyStream.Free;
+
   // ===========================================  download the version information form github server code ending
 
   myinifile := Tinifile.Create(path + '\ServerVerson.ini');
@@ -640,22 +677,22 @@ procedure TForm1.Timer2Timer(Sender: TObject);
 const
   FLAG_ICC_FORCE_CONNECTION = 1;
 begin
- { if InternetCheckConnection('http://www.baidu.com',
+  { if InternetCheckConnection('http://www.baidu.com',
     FLAG_ICC_FORCE_CONNECTION, 0) then
     Label5.Caption := '网络正常'
-  else
-  Label5.Caption := '网络离线,请检查网络';
-  idhttp2.Disconnect;
-  Timer1.Enabled := False;
-                  }
+    else
+    Label5.Caption := '网络离线,请检查网络';
+    idhttp2.Disconnect;
+    Timer1.Enabled := False;
+  }
 
 end;
-
 
 procedure TForm1.Timer3Timer(Sender: TObject);
 begin
   // Button1.visible := True;
   Timer3.Enabled := False;
+    Label1.Caption := '获取版本信息成功';
   Button1.Click;
 end;
 
@@ -689,13 +726,13 @@ procedure TForm1.IdHTTP2WorkBegin(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCountMax: Int64);
 begin
   try
-  ProgressBar1.Max := AWorkCountMax;
-  StatusBar1.Panels[0].text := '总计文件大小:' + BytesToStr(AWorkCountMax);
-  StatusBar1.Panels[2].text := 'Downloading Update file from target server';
-  Update;
+    ProgressBar1.Max := AWorkCountMax;
+    StatusBar1.Panels[0].text := '总计文件大小:' + BytesToStr(AWorkCountMax);
+
+    Update;
   except
-   showmessage('网络错误');
-   end;
+    showmessage('网络错误');
+  end;
 
 end;
 
