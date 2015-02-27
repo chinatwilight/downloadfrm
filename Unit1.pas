@@ -65,6 +65,7 @@ type
 
 var
   Form1: TForm1;
+  Aborttransfer: boolean;
 
   i: integer;
 
@@ -93,8 +94,6 @@ var
 implementation
 
 {$R *.dfm}
-
-uses Unit2;
 
 function IsWOW64: BOOL;
 begin
@@ -279,7 +278,7 @@ begin
 end;
 
 function CreateShortcut(Exe: string; Lnk: string = ''; Dir: string = '';
-  ID: integer = -1): Boolean;
+  ID: integer = -1): boolean;
 var
   IObj: IUnknown;
   ILnk: IShellLink;
@@ -362,7 +361,7 @@ function KillTask(ExeFileName: string): integer;
 const
   PROCESS_TERMINATE = $0001;
 var
-  ContinueLoop: Boolean;
+  ContinueLoop: boolean;
   FSnapshotHandle: THandle;
   FProcessEntry32: TProcessEntry32;
 begin
@@ -435,7 +434,7 @@ end;
 // --------------------------------------------------------------------
 // 判断文件独占性
 
-function IsFileInUse(fName: string): Boolean;
+function IsFileInUse(fName: string): boolean;
 var
   HFileRes: HFILE;
 begin
@@ -692,7 +691,7 @@ procedure TForm1.Timer3Timer(Sender: TObject);
 begin
   // Button1.visible := True;
   Timer3.Enabled := False;
-    Label1.Caption := '获取版本信息成功';
+  Label1.Caption := '获取版本信息成功';
   Button1.Click;
 end;
 
@@ -708,7 +707,12 @@ var
   strmax: string;
 
 begin
-
+  if Aborttransfer then
+  begin
+    IdHTTP2.disconnect;
+    showmessage('终止传输!');
+  END;
+    StatusBar1.Panels[3].text := idhttp2.ResponseText;
   StatusBar1.Panels[1].text := '已经下载文件:' + BytesToStr(AWorkCount);
   ProgressBar1.Position := AWorkCount;
   try
@@ -725,6 +729,7 @@ end;
 procedure TForm1.IdHTTP2WorkBegin(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCountMax: Int64);
 begin
+  Aborttransfer := False;
   try
     ProgressBar1.Max := AWorkCountMax;
     StatusBar1.Panels[0].text := '总计文件大小:' + BytesToStr(AWorkCountMax);
